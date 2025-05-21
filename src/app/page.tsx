@@ -34,11 +34,10 @@ export default function ClientRevenuePage() {
   const availableMonths = useMemo(() => getAvailableMonths(), []);
   const [selectedMonthYear, setSelectedMonthYear] = useState<string>(availableMonths[0].value);
   const [revenueData, setRevenueData] = useState<CombinedDoctorData[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(false); // Initial loading to false for login page
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [authToken, setAuthToken] = useState<string | null>(null);
 
-  // Page-level authentication state
   const [isPageAuthenticated, setIsPageAuthenticated] = useState<boolean>(false);
   const [inputPassword, setInputPassword] = useState<string>("");
   const [loginError, setLoginError] = useState<string | null>(null);
@@ -48,16 +47,23 @@ export default function ClientRevenuePage() {
       setIsLoading(true);
       setError(null);
 
+      const apiEmail = process.env.NEXT_PUBLIC_API_EMAIL;
+      const apiPassword = process.env.NEXT_PUBLIC_API_PASSWORD;
+
+      if (!apiEmail || !apiPassword) {
+        console.error("API credentials (email or password) are not set in environment variables.");
+        setError("API Email/Password not configured. Please check environment variables (e.g., .env.local) and ensure NEXT_PUBLIC_API_EMAIL and NEXT_PUBLIC_API_PASSWORD are set.");
+        setIsLoading(false);
+        setAuthToken(null);
+        setRevenueData([]);
+        return;
+      }
+
       let tokenToUse = authToken;
 
       try {
-        // Step 1: Ensure API authentication
         if (!tokenToUse) {
           console.log("No existing API token, attempting API authentication...");
-          const apiEmail = process.env.NEXT_PUBLIC_API_EMAIL;
-          const apiPassword = process.env.NEXT_PUBLIC_API_PASSWORD;
-
-          // The authenticate function in api.ts will check if email/password are provided
           const newAuthToken = await authenticate(apiEmail, apiPassword);
           setAuthToken(newAuthToken);
           tokenToUse = newAuthToken;
@@ -107,7 +113,11 @@ export default function ClientRevenuePage() {
         console.error("Error during API operation:", err);
         const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred.";
         setError(errorMessage);
-        setAuthToken(null); // Clear API token on error to force re-auth
+        // Optionally clear token on certain types of errors to force re-auth,
+        // but not if the error was due to missing env vars initially.
+        if (errorMessage.includes("Authentication failed") || errorMessage.includes("token")) {
+            setAuthToken(null);
+        }
         setRevenueData([]);
       } finally {
         setIsLoading(false);
@@ -118,11 +128,10 @@ export default function ClientRevenuePage() {
     if (isPageAuthenticated) {
       fetchDataAndAuthIfNeeded();
     } else {
-      // Reset states if not page authenticated
       setRevenueData([]);
       setIsLoading(false);
       setError(null);
-      setAuthToken(null); // Clear API token if page is not authenticated
+      setAuthToken(null); 
     }
   }, [selectedMonthYear, authToken, availableMonths, isPageAuthenticated]);
 
@@ -186,7 +195,7 @@ export default function ClientRevenuePage() {
             Client Revenue Statistics
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-6 space-y-8">
+        <CardContent className="p-6 pt-8 space-y-8"> {/* Adjusted CardContent padding-top */}
           <MonthSelector
             selectedMonthYear={selectedMonthYear}
             onMonthChange={setSelectedMonthYear}

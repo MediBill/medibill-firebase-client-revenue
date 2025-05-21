@@ -47,11 +47,15 @@ export default function ClientRevenuePage() {
           console.log("No existing token, attempting API authentication...");
           // Use environment variables for credentials
           const apiEmail = process.env.NEXT_PUBLIC_API_EMAIL;
-          const apiPassword = process.env.NEXT_PUBLIC_API_PASSWORD;
+          const apiPassword = process.env.NEXT_PUBLIC_API_PASSWORD || "Onejuly2021"; // Default password
 
-          if (!apiEmail || !apiPassword) {
-            throw new Error("API credentials (email/password) are not configured in environment variables.");
+          if (!apiEmail) {
+            throw new Error("API email (NEXT_PUBLIC_API_EMAIL) is not configured in environment variables. The password will use a default if NEXT_PUBLIC_API_PASSWORD is not set.");
           }
+          if (!process.env.NEXT_PUBLIC_API_PASSWORD) {
+            console.warn("Using default API password. For production, please set NEXT_PUBLIC_API_PASSWORD in your environment variables.");
+          }
+
 
           const newAuthToken = await authenticate(apiEmail, apiPassword);
           setAuthToken(newAuthToken); 

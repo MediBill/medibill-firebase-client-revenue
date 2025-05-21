@@ -50,9 +50,9 @@ export const RevenueTable: FC<RevenueTableProps> = ({ data, isLoading }) => {
           <TableRow>
             <TableHead className="w-[180px] py-3 px-4 text-left font-semibold text-secondary-foreground">Account Number</TableHead>
             <TableHead className="py-3 px-4 text-left font-semibold text-secondary-foreground">Doctor Name</TableHead>
-            <TableHead className="w-[200px] py-3 px-4 text-right font-semibold text-secondary-foreground">Total Received ({tableHeaderMonthYear})</TableHead>
-            <TableHead className="w-[220px] py-3 px-4 text-right font-semibold text-secondary-foreground">Total Medibill Invoice</TableHead>
-          </TableRow>
+            <TableHead className="w-[200px] py-3 px-4 text-right font-semibold text-secondary-foreground">Total Received</TableHead>
+            <TableHead className="w-[220px] py-3 px-4 text-right font-semibold text-secondary-foreground">Medibill Invoice</TableHead>
+ </TableRow>
         </TableHeader>
         <TableBody>
           {data.map((doctor) => (

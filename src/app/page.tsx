@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MonthSelector, type MonthOption } from "@/components/dashboard/MonthSelector";
 import { RevenueTable } from "@/components/dashboard/RevenueTable";
 import type { CombinedDoctorData } from "@/lib/types";
-import { getDoctors, getMedibillInvoices, getTotalReceived, authenticate } from "@/lib/api";
 import { format, subMonths } from 'date-fns';
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -36,114 +35,75 @@ export default function ClientRevenuePage() {
   const [revenueData, setRevenueData] = useState<CombinedDoctorData[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [authToken, setAuthToken] = useState<string | null>(null);
 
   const [isPageAuthenticated, setIsPageAuthenticated] = useState<boolean>(false);
   const [inputPassword, setInputPassword] = useState<string>("");
   const [loginError, setLoginError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchDataAndAuthIfNeeded = async () => {
-      setIsLoading(true);
-      setError(null);
-
-      const apiEmail = process.env.NEXT_PUBLIC_API_EMAIL;
-      const apiPassword = process.env.NEXT_PUBLIC_API_PASSWORD;
-
-      if (!apiEmail || !apiPassword) {
-        console.error("API credentials (email or password) are not set in environment variables.");
-        setError("API Email/Password not configured. Please check environment variables (e.g., .env.local) and ensure NEXT_PUBLIC_API_EMAIL and NEXT_PUBLIC_API_PASSWORD are set.");
-        setIsLoading(false);
-        setAuthToken(null);
+    const fetchRevenueData = async () => {
+      if (!isPageAuthenticated) {
         setRevenueData([]);
+        setIsLoading(false);
+        setError(null);
         return;
       }
 
-      let tokenToUse = authToken;
+      setIsLoading(true);
+      setError(null);
+      setRevenueData([]);
 
       try {
-        if (!tokenToUse) {
-          console.log("No existing API token, attempting API authentication...");
-          const newAuthToken = await authenticate(apiEmail, apiPassword);
-          setAuthToken(newAuthToken);
-          tokenToUse = newAuthToken;
-          console.log("API Authentication successful.");
-        } else {
-          console.log("Using existing API auth token.");
-        }
-
-        if (!tokenToUse) {
-          throw new Error("API Authentication token not available after auth attempt.");
-        }
-
-        console.log(`Fetching data for month: ${selectedMonthYear}`);
-        const doctors = await getDoctors(tokenToUse);
-        if (doctors.length === 0) {
-          console.log("No doctors found after filtering.");
-          setRevenueData([]);
-          setIsLoading(false);
-          return;
-        }
-        console.log(`Found ${doctors.length} doctors.`);
-        const doctorIds = doctors.map(doc => doc.userId);
-
-        const [yearStr, monthStr] = selectedMonthYear.split('-');
-
-        const [invoices, receivedAmounts] = await Promise.all([
-          getMedibillInvoices(tokenToUse, doctorIds, monthStr, yearStr),
-          getTotalReceived(tokenToUse, doctorIds, monthStr, yearStr)
-        ]);
-        console.log("Fetched invoices and received amounts.");
-
-        const currentMonthLabel = availableMonths.find(m => m.value === selectedMonthYear)?.label || selectedMonthYear;
-
-        const combinedData = doctors.map(doctor => {
-          const invoice = invoices.find(inv => inv.userId === doctor.userId);
-          const received = receivedAmounts.find(rec => rec.userId === doctor.userId);
-          return {
-            ...doctor,
-            totalMedibillInvoice: invoice?.totalAmount || 0,
-            totalReceived: received?.receivedAmount || 0,
-            monthYear: currentMonthLabel,
-          };
+        console.log(`Fetching data via internal API for month: ${selectedMonthYear}`);
+        const response = await fetch('/api/revenue-data', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ selectedMonthYear }),
         });
-        setRevenueData(combinedData);
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ error: "Failed to parse error response." }));
+          throw new Error(errorData.error || `Failed to fetch data: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+
+        if (result.error) {
+          throw new Error(result.error);
+        }
+        
+        // Map monthYear from YYYY-MM to display label
+        const processedData = result.data.map((item: CombinedDoctorData) => ({
+          ...item,
+          monthYear: availableMonths.find(m => m.value === item.monthYear)?.label || item.monthYear,
+        }));
+        setRevenueData(processedData);
 
       } catch (err) {
-        console.error("Error during API operation:", err);
+        console.error("Error fetching revenue data:", err);
         const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred.";
         setError(errorMessage);
-        // Optionally clear token on certain types of errors to force re-auth,
-        // but not if the error was due to missing env vars initially.
-        if (errorMessage.includes("Authentication failed") || errorMessage.includes("token")) {
-            setAuthToken(null);
-        }
         setRevenueData([]);
       } finally {
         setIsLoading(false);
-        console.log("Data fetching/API auth process finished.");
+        console.log("Internal API data fetching process finished.");
       }
     };
 
-    if (isPageAuthenticated) {
-      fetchDataAndAuthIfNeeded();
-    } else {
-      setRevenueData([]);
-      setIsLoading(false);
-      setError(null);
-      setAuthToken(null); 
-    }
-  }, [selectedMonthYear, authToken, availableMonths, isPageAuthenticated]);
+    fetchRevenueData();
+  }, [selectedMonthYear, isPageAuthenticated, availableMonths]);
 
   const handlePageLogin = (e: React.FormEvent) => {
     e.preventDefault();
     if (inputPassword === DEFAULT_PAGE_PASSWORD) {
       setIsPageAuthenticated(true);
       setLoginError(null);
-      setInputPassword("");
+      setInputPassword(""); // Clear password after successful login
     } else {
       setLoginError("Incorrect password. Please try again.");
-      setInputPassword("");
+      setInputPassword(""); // Clear password after failed attempt
     }
   };
 
@@ -195,7 +155,7 @@ export default function ClientRevenuePage() {
             Client Revenue Statistics
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-6 pt-8 space-y-8"> {/* Adjusted CardContent padding-top */}
+        <CardContent className="p-6 pt-8 space-y-8">
           <MonthSelector
             selectedMonthYear={selectedMonthYear}
             onMonthChange={setSelectedMonthYear}

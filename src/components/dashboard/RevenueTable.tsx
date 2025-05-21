@@ -19,7 +19,7 @@ interface RevenueTableProps {
 
 export const RevenueTable: FC<RevenueTableProps> = ({ data, isLoading }) => {
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+    return new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR' }).format(amount);
   };
 
   const tableHeaderMonthYear = data.length > 0 && data[0]?.monthYear ? data[0].monthYear : "Selected Month";

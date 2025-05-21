@@ -46,7 +46,7 @@ export default function ClientRevenuePage() {
         if (!tokenToUse) {
           console.log("No existing token, attempting API authentication...");
           // Use environment variables for credentials in a real app
-          const newAuthToken = await authenticate(process.env.NEXT_PUBLIC_API_EMAIL || "user@medibill.com", process.env.NEXT_PUBLIC_API_PASSWORD || "securePassword123");
+          const newAuthToken = await authenticate(process.env.NEXT_PUBLIC_API_EMAIL || "medibill.developer@gmail.com", process.env.NEXT_PUBLIC_API_PASSWORD || "apt@123!");
           setAuthToken(newAuthToken); 
           tokenToUse = newAuthToken;
           console.log("API Authentication successful.");

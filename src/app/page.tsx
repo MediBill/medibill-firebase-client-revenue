@@ -35,6 +35,8 @@ export default function ClientRevenuePage() {
   const [revenueData, setRevenueData] = useState<CombinedDoctorData[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [sortConfig, setSortConfig] = useState<{ key: string | null, direction: 'asc' | 'desc' | null }>({ key: null, direction: 'asc' });
 
   const [isPageAuthenticated, setIsPageAuthenticated] = useState<boolean>(false);
   const [inputPassword, setInputPassword] = useState<string>("");
@@ -94,6 +96,42 @@ export default function ClientRevenuePage() {
 
     fetchRevenueData();
   }, [selectedMonthYear, isPageAuthenticated, availableMonths]);
+  
+  const handleSortChange = (key: string) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    } else if (sortConfig.key === key && sortConfig.direction === 'desc') {
+      // Reset sorting if clicked twice in descending order
+      setSortConfig({ key: null, direction: null });
+      return;
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const sortedAndFilteredRevenueData = useMemo(() => {
+    let filteredData = revenueData;
+
+    if (searchQuery) {
+    const lowerCaseQuery = searchQuery.toLowerCase();
+      filteredData = revenueData.filter(doctor =>
+      doctor.accountNumber.toLowerCase().includes(lowerCaseQuery) ||
+      doctor.name.toLowerCase().includes(lowerCaseQuery)
+    );
+    }
+
+    if (sortConfig.key !== null && sortConfig.direction !== null) {
+      const sortedData = [...filteredData].sort((a, b) => {
+        const aValue = a[sortConfig.key as keyof CombinedDoctorData];
+        const bValue = b[sortConfig.key as keyof CombinedDoctorData];
+        if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+      return sortedData;
+    }
+    return filteredData;
+  }, [revenueData, searchQuery, sortConfig]);
 
   const handlePageLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -151,9 +189,7 @@ export default function ClientRevenuePage() {
     <div className="min-h-screen p-4 sm:p-6 md:p-8 bg-background">
       <Card className="w-full max-w-6xl mx-auto shadow-2xl rounded-xl overflow-hidden border-primary/20">
         <CardHeader className="bg-primary text-primary-foreground p-6">
-          <CardTitle className="text-3xl font-semibold text-center tracking-tight">
-            Client Revenue Statistics
-          </CardTitle>
+          <CardTitle className="text-3xl font-semibold text-center tracking-tight"></CardTitle>
         </CardHeader>
         <CardContent className="p-6 pt-8 space-y-8">
           <MonthSelector
@@ -169,7 +205,19 @@ export default function ClientRevenuePage() {
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
-          <RevenueTable data={revenueData} isLoading={isLoading} />
+          <Input
+            placeholder="Search by Account Number or Doctor Name"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="mb-4"
+            disabled={isLoading}
+          />
+          <RevenueTable
+            data={sortedAndFilteredRevenueData}
+            isLoading={isLoading}
+            sortBy={sortConfig.key}
+            sortDirection={sortConfig.direction as 'asc' | 'desc'}
+            onSortChange={handleSortChange} />
         </CardContent>
       </Card>
     </div>

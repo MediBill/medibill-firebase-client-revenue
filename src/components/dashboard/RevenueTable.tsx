@@ -15,9 +15,12 @@ import type { CombinedDoctorData } from "@/lib/types";
 interface RevenueTableProps {
   data: CombinedDoctorData[];
   isLoading: boolean;
+  sortBy?: string;
+  sortDirection?: 'asc' | 'desc';
+  onSortChange: (column: string) => void;
 }
 
-export const RevenueTable: FC<RevenueTableProps> = ({ data, isLoading }) => {
+export const RevenueTable: FC<RevenueTableProps> = ({ data, isLoading, sortBy, sortDirection, onSortChange }) => {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR' }).format(amount);
   };
@@ -49,9 +52,24 @@ export const RevenueTable: FC<RevenueTableProps> = ({ data, isLoading }) => {
         <TableHeader className="bg-secondary/70">
           <TableRow>
             <TableHead className="w-[180px] py-3 px-4 text-left font-semibold text-secondary-foreground">Account Number</TableHead>
-            <TableHead className="py-3 px-4 text-left font-semibold text-secondary-foreground">Doctor Name</TableHead>
-            <TableHead className="w-[200px] py-3 px-4 text-right font-semibold text-secondary-foreground">Total Received</TableHead>
-            <TableHead className="w-[220px] py-3 px-4 text-right font-semibold text-secondary-foreground">Medibill Invoice</TableHead>
+            <TableHead 
+              className="py-3 px-4 text-left font-semibold text-secondary-foreground cursor-pointer hover:bg-secondary/80 transition-colors"
+              onClick={() => onSortChange('name')}
+            >
+              Doctor Name {sortBy === 'name' && (sortDirection === 'asc' ? '▲' : '▼')}
+            </TableHead>
+            <TableHead 
+              className="w-[200px] py-3 px-4 text-right font-semibold text-secondary-foreground cursor-pointer hover:bg-secondary/80 transition-colors"
+              onClick={() => onSortChange('totalReceived')}
+            >
+              Total Received {sortBy === 'totalReceived' && (sortDirection === 'asc' ? '▲' : '▼')}
+            </TableHead>
+            <TableHead 
+              className="w-[220px] py-3 px-4 text-right font-semibold text-secondary-foreground cursor-pointer hover:bg-secondary/80 transition-colors"
+              onClick={() => onSortChange('totalMedibillInvoice')}
+            >
+              Medibill Invoice {sortBy === 'totalMedibillInvoice' && (sortDirection === 'asc' ? '▲' : '▼')}
+            </TableHead>
  </TableRow>
         </TableHeader>
         <TableBody>
